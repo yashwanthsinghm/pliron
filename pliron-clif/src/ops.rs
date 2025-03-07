@@ -108,9 +108,15 @@ new_int_bin_op!(
     ISubOp,
     "clif.isub"
 );
+new_int_bin_op!(
+    /// Equivalent to CLIF's standard integer multiplication (with no overflow) opcode.
+    IMulOp,
+    "clif.imul"
+);
 
 pub fn register(ctx: &mut Context) {
     ReturnOp::register(ctx, ReturnOp::parser_fn);
     IAddOp::register(ctx, IAddOp::parser_fn);
     ISubOp::register(ctx, ISubOp::parser_fn);
+    IMulOp::register(ctx, IMulOp::parser_fn);
 }

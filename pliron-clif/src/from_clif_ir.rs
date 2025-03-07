@@ -27,7 +27,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     op_interfaces::BinArithOp,
-    ops::{IAddOp, ReturnOp},
+    ops::{IAddOp, IMulOp,ReturnOp},
 };
 
 /// Converts a slice of [ClifValue]s to Pliron's [PlironValue]s.
@@ -112,6 +112,12 @@ fn convert_instruction(
             let operands = convert_operands(ctx, dfg, cctx, &inst_args)?;
             let iadd_op = IAddOp::new(ctx, operands[0], operands[1]);
             let op = iadd_op.get_operation();
+            return Ok(op);
+        }
+        Opcode::Imul => {
+            let operands = convert_operands(ctx, dfg, cctx,&inst_args)?;
+            let imul_op = IMulOp::new(ctx, operands[0], operands[1]);
+            let op = imul_op.get_operation();
             return Ok(op);
         }
         Opcode::Return => match inst_args.len() {
@@ -575,6 +581,43 @@ mod tests {
     op_2v1_res0 = clif.iadd block_1v1_arg0,block_1v1_arg1:builtin.int <si32>;
     clif.return (op_2v1_res0)
 }", format!("{}", print_func)
+            );
+        }
+    }
+
+
+    
+    #[test]
+    fn test_convert_and_print_clif_mul_to_pliron() {
+        let clif_code = r#"
+        function %mul(i32, i32) -> i32 apple_aarch64 { 
+            block0(v0: i32, v1: i32): 
+                v2 = imul v0, v1 
+                return v2 
+        }        
+    "#;
+
+        let functions = parse_functions(clif_code).expect("Failed to parse .clif");
+
+        for func in functions {
+            let mut store = ConversionCtx::default();
+            let mut ctx = Context::new();
+            builtin::register(&mut ctx);
+            crate::register(&mut ctx);
+            let func_op = match convert_function(&mut ctx, &mut store, func) {
+                Ok(op) => op,
+                Err(e) => panic!("Error: {}", e),
+            };
+            let print_func = func_op.disp(&ctx);
+            println!("{}", print_func);
+            assert_eq!(
+                "builtin.func @mul: builtin.function <(builtin.int <si32>, builtin.int <si32>)->(builtin.int <si32>)> 
+                {
+                  ^entry_block_1v1(block_1v1_arg0:builtin.int <si32>,block_1v1_arg1:builtin.int <si32>):
+                    op_2v1_res0 = clif.imul block_1v1_arg0,block_1v1_arg1:builtin.int <si32>;
+                    clif.return (op_2v1_res0)
+                }",
+                format!("{}", print_func)
             );
         }
     }
